@@ -1,0 +1,12 @@
+[package]
+name = "b_dumper"
+version = "0.1.0"
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+term-painter = "0.3.0"
+text_io = "0.1.8"
+nanoid = "0.4.0"
+pdb = "0.7.0"
