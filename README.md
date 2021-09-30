@@ -11,5 +11,5 @@ A simple windows bare-bones rust BDS .pdb dumper which dumps symbols and RVAs (R
 ### Usage
 
 <p align="center">
-  <img src="https://cdn.discordapp.com/attachments/891760155614642277/891760239714648114/Screenshot_80.png?width=803&height=418" />
+  <img src="https://media.discordapp.net/attachments/891760155614642277/893266114082115584/Screenshot_88.png" />
 </p>
