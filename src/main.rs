@@ -4,6 +4,7 @@ use {
     std::{fs::File, io::Write, process::Command},
     term_painter::{Color::*, ToStyle},
     text_io::read,
+    termprogress::prelude::*
 };
 
 fn path_exists(path: &str) -> bool {
@@ -43,6 +44,8 @@ fn main() -> pdb::Result<()> {
 
     let mut file_type: String;
 
+    let mut progress = Bar::default();
+
     loop {
         println!(
             "{}",
@@ -52,6 +55,9 @@ fn main() -> pdb::Result<()> {
         );
 
         file_type = read!();
+
+        progress.set_title("Creating file...");
+        progress.set_progress(0.2);
 
         if file_type == "txt" {
             std::fs::File::create("./SymHook.txt").expect("ERROR: Could not create file");
@@ -72,6 +78,8 @@ fn main() -> pdb::Result<()> {
         .open("./temp.txt")
         .unwrap();
 
+    progress.set_progress(0.3);
+
     if file_type == "txt" {
         dump_file = std::fs::OpenOptions::new()
             .write(true)
@@ -88,6 +96,9 @@ fn main() -> pdb::Result<()> {
 
     std::fs::remove_file("./temp.txt")?;
 
+    progress.set_title("Started writing to file...");
+    progress.set_progress(0.5);
+
     write!(
         dump_file,
         "/*###############################################################\
@@ -103,10 +114,13 @@ fn main() -> pdb::Result<()> {
         'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     ];
 
-    println!("{}", Yellow.paint("Generating file. Please wait..."));
+    progress.set_title("Generating file...");
+    progress.set_progress(0.6);
 
     let file_path = File::open(pdb_path)?;
     let mut pdb = pdb::PDB::open(file_path)?;
+
+    progress.set_progress(0.7);
 
     let symbol_table = pdb.global_symbols()?;
     let address_map = pdb.address_map()?;
@@ -134,6 +148,9 @@ fn main() -> pdb::Result<()> {
             _ => {}
         }
     }
+    progress.set_title("Done");
+    progress.set_progress(1.0);
+    println!("\n");
     let _system_pause = Command::new("cmd.exe").arg("/c").arg("pause").status();
 
     Ok(())
