@@ -1,104 +1,21 @@
+#![windows_subsystem = "windows"]
+
+extern crate native_windows_derive as nwd;
+extern crate native_windows_gui as nwg;
+
 use {
     nanoid::nanoid,
+    nwd::NwgUi,
+    nwg::NativeUi,
     pdb::FallibleIterator,
-    std::{fs::File, io::Write, process::Command},
-    term_painter::{Color::*, ToStyle},
-    text_io::read,
-    termprogress::prelude::*
+    std::{fs::File, io::Write},
 };
 
 fn path_exists(path: &str) -> bool {
     std::fs::metadata(path).is_ok()
 }
 
-fn main() -> pdb::Result<()> {
-    println!(
-        "{}",
-        BrightRed.paint(
-            "
- __   __              __   ___  __
-|__) |  \\ |  |  |\\/| |__) |__  |__)
-|__) |__/ \\__/  |  | |    |___ |  \\
-                                    "
-        )
-    );
-    println!(
-        "A .pdb file dumper made in Rust by Luke7720 designed to extract\n\
-         function prototypes and RVAs (Relative Virtual Addresses) and\n\
-         export them into either text or C++ header files\n"
-    );
-    let mut pdb_path: String;
-    loop {
-        println!("{}", Cyan.paint("Input the pdb file path: "));
-
-        pdb_path = read!();
-
-        let file_exists = path_exists(&*pdb_path);
-
-        if file_exists == true {
-            break;
-        } else {
-            println!("{}", Red.paint("File was not found"));
-        }
-    }
-
-    let mut file_type: String;
-
-    let mut progress = Bar::default();
-
-    loop {
-        println!(
-            "{}",
-            Cyan.paint(
-                "Input the output file type ('hpp' for a C++ header; 'txt' for a text file): "
-            )
-        );
-
-        file_type = read!();
-
-        progress.set_title("Creating file...");
-        progress.set_progress(0.2);
-
-        if file_type == "txt" {
-            std::fs::File::create("./SymHook.txt").expect("ERROR: Could not create file");
-            break;
-        } else if file_type == "hpp" {
-            std::fs::File::create("SymHook.hpp").expect("ERROR: Could not create file");
-            break;
-        } else {
-            println!("{}", Red.paint("Unknown file type"))
-        }
-    }
-
-    std::fs::File::create("./temp.txt").expect("ERROR: Could not create file");
-
-    let mut dump_file = std::fs::OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open("./temp.txt")
-        .unwrap();
-
-    progress.set_progress(0.3);
-
-    if file_type == "txt" {
-        dump_file = std::fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("./SymHook.txt")
-            .unwrap();
-    } else if file_type == "hpp" {
-        dump_file = std::fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("./SymHook.hpp")
-            .unwrap();
-    }
-
-    std::fs::remove_file("./temp.txt")?;
-
-    progress.set_title("Started writing to file...");
-    progress.set_progress(0.5);
-
+fn pdb_dump(pdb_path: String, file_type: String, mut dump_file: File) -> pdb::Result<()> {
     write!(
         dump_file,
         "/*###############################################################\
@@ -114,13 +31,8 @@ fn main() -> pdb::Result<()> {
         'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
     ];
 
-    progress.set_title("Generating file...");
-    progress.set_progress(0.6);
-
-    let file_path = File::open(pdb_path)?;
+    let file_path = File::open(&pdb_path)?;
     let mut pdb = pdb::PDB::open(file_path)?;
-
-    progress.set_progress(0.7);
 
     let symbol_table = pdb.global_symbols()?;
     let address_map = pdb.address_map()?;
@@ -130,10 +42,10 @@ fn main() -> pdb::Result<()> {
         match symbol.parse() {
             Ok(pdb::SymbolData::Public(data)) if data.function => {
                 let rva = data.offset.to_rva(&address_map).unwrap_or_default();
-                if file_type == "txt" {
+                if file_type == ".txt" {
                     write!(dump_file, "{}\n{}\n\n", data.name, rva)
                         .expect("ERROR: Could not write to file");
-                } else if file_type == "hpp" {
+                } else if file_type == ".hpp" {
                     let fn_id = nanoid!(10, &char_list);
                     write!(
                         dump_file,
@@ -148,10 +60,98 @@ fn main() -> pdb::Result<()> {
             _ => {}
         }
     }
-    progress.set_title("Done");
-    progress.set_progress(1.0);
-    println!("\n");
-    let _system_pause = Command::new("cmd.exe").arg("/c").arg("pause").status();
 
+    nwg::simple_message("Completed", &format!("Completed dumping {}", pdb_path));
     Ok(())
+}
+
+#[derive(Default, NwgUi)]
+pub struct BedrockDumper {
+    #[nwg_control(size: (300, 260), position: (300, 300), title: "BDumper", flags: "WINDOW|VISIBLE")]
+    #[nwg_events( OnWindowClose: [BedrockDumper::exit_program] )]
+    window: nwg::Window,
+
+    #[nwg_control(text: "BDumper is a .pdb file dumper made in Rust by Luke7720 designed to extract \
+         function prototypes and RVAs (Relative Virtual Addresses) and \
+         export them into either text or C++ header files\n\
+         -----------------------------------------------------------------------
+         ", size: (280, 100), position: (10, 10))]
+    label: nwg::Label,
+
+    #[nwg_control(text: "Input your .pdb file path here", size: (280, 25), position: (10, 110))]
+    label2: nwg::Label,
+
+    #[nwg_control(text: "", size: (280, 25), position: (10, 130))]
+    pdb_path: nwg::TextInput,
+
+    #[nwg_control(text: "Input your file type (.hpp or .txt) here", size: (280, 25), position: (10, 160))]
+    label3: nwg::Label,
+
+    #[nwg_control(text: "", size: (280, 25), position: (10, 180))]
+    file_type: nwg::TextInput,
+
+    #[nwg_control(text: "Dump Data", size: (280, 30), position: (10, 210))]
+    #[nwg_events( OnButtonClick: [BedrockDumper::dump] )]
+    dump: nwg::Button,
+}
+
+impl BedrockDumper {
+    fn dump(&self) {
+        let pdb_path = self.pdb_path.text();
+        let file_type = self.file_type.text();
+
+        let file_exists = path_exists(&pdb_path);
+
+        if file_exists == false {
+            nwg::simple_message("Error", &format!("File does not exist: {}", pdb_path));
+            return;
+        }
+
+        if file_type == ".txt" {
+            std::fs::File::create("./SymHook.txt").expect("ERROR: Could not create file");
+        } else if file_type == ".hpp" {
+            std::fs::File::create("SymHook.hpp").expect("ERROR: Could not create file");
+        } else {
+            nwg::simple_message("Error", &format!("Invalid file type: {}", file_type));
+            return;
+        }
+
+        std::fs::File::create("./temp.txt").expect("ERROR: Could not create file");
+
+        let mut dump_file = std::fs::OpenOptions::new()
+            .write(true)
+            .append(true)
+            .open("./temp.txt")
+            .unwrap();
+
+        if file_type == ".txt" {
+            dump_file = std::fs::OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open("./SymHook.txt")
+                .unwrap();
+        } else if file_type == ".hpp" {
+            dump_file = std::fs::OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open("./SymHook.hpp")
+                .unwrap();
+        }
+
+        std::fs::remove_file("./temp.txt").expect("ERROR: Could not remove file");
+
+        pdb_dump(pdb_path, file_type, dump_file);
+    }
+
+    fn exit_program(&self) {
+        nwg::stop_thread_dispatch();
+    }
+}
+
+fn main() {
+    nwg::init().expect("Failed to init Native Windows GUI");
+
+    let _app = BedrockDumper::build_ui(Default::default()).expect("Failed to build UI");
+
+    nwg::dispatch_thread_events();
 }
