@@ -1,14 +1,12 @@
 #![windows_subsystem = "windows"]
 
 mod pdb;
+mod files;
 
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use {
-    nwd::NwgUi,
-    nwg::NativeUi,
-};
+use {nwd::NwgUi, nwg::NativeUi};
 
 #[derive(Default, NwgUi)]
 pub struct BedrockDumper {
@@ -42,24 +40,14 @@ pub struct BedrockDumper {
 
 impl BedrockDumper {
     fn dump(&self) {
-        let pdb_path = self.pdb_path.text();
-        let file_type = self.file_type.text();
+        let pdb_path: &str = &self.pdb_path.text();
+        let file_type: &str = &self.file_type.text();
 
-        let file_exists = pdb::path_exists(&pdb_path);
-
-        if file_exists == false {
+        if files::path_exists(&pdb_path) == false {
             nwg::simple_message("Error", &format!("File does not exist: {}", pdb_path));
             return;
         }
-
-        if file_type == ".txt" {
-            std::fs::File::create("./SymHook.txt").expect("ERROR: Could not create file");
-        } else if file_type == ".hpp" {
-            std::fs::File::create("SymHook.hpp").expect("ERROR: Could not create file");
-        } else {
-            nwg::simple_message("Error", &format!("Invalid file type: {}", file_type));
-            return;
-        }
+        files::create_file(&file_type);
 
         std::fs::File::create("./temp.txt").expect("ERROR: Could not create file");
 
@@ -69,23 +57,24 @@ impl BedrockDumper {
             .open("./temp.txt")
             .unwrap();
 
-        if file_type == ".txt" {
-            dump_file = std::fs::OpenOptions::new()
+        match file_type {
+            ".txt" => dump_file = std::fs::OpenOptions::new()
                 .write(true)
                 .append(true)
                 .open("./SymHook.txt")
-                .unwrap();
-        } else if file_type == ".hpp" {
-            dump_file = std::fs::OpenOptions::new()
+                .unwrap(),
+            ".hpp" => dump_file = std::fs::OpenOptions::new()
                 .write(true)
                 .append(true)
                 .open("./SymHook.hpp")
-                .unwrap();
-        }
+                .unwrap(),
+            _ => {}
+        };
 
         std::fs::remove_file("./temp.txt").expect("ERROR: Could not remove file");
 
-        pdb::pdb_dump(pdb_path, file_type, dump_file);
+        pdb::pdb_dump(&pdb_path, file_type, dump_file).expect("ERROR: Failed to dump pdb contents");
+        nwg::simple_message("Completed", &format!("Completed dumping {}", pdb_path));
     }
 
     fn exit_program(&self) {
