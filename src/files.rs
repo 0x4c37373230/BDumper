@@ -8,7 +8,7 @@ pub fn create_file(file_type: &str) {
         ".hpp" => std::fs::File::create("SymHook.hpp").expect("ERROR: Could not create file"),
         _ => {
             nwg::simple_message("Error", &format!("Invalid file type: {}", file_type));
-            return
+            return;
         }
     };
 }

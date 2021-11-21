@@ -56,3 +56,42 @@ pub fn pdb_dump(pdb_path: &str, file_type: &str, mut dump_file: File) -> pdb::Re
     }
     Ok(())
 }
+
+pub fn find_function(pdb_path: &str, function_name: &str) -> pdb::Result<()> {
+    let file_path = File::open(&pdb_path)?;
+    let mut pdb = pdb::PDB::open(file_path)?;
+    let symbol_table = pdb.global_symbols()?;
+    let address_map = pdb.address_map()?;
+    let mut symbols = symbol_table.iter();
+    let mut found: bool = false;
+
+    while let Some(symbol) = symbols.next()? {
+        match symbol.parse() {
+            Ok(pdb::SymbolData::Public(data)) if data.function => {
+                let symbol = data.name.to_string();
+                let rva = data.offset.to_rva(&address_map).unwrap_or_default();
+                let function_sym: Vec<&str> = function_name.split("::").collect();
+                let substr = format!("{}@{}", function_sym[1], function_sym[0]);
+
+                if symbol.contains(&substr) {
+                    nwg::simple_message(
+                        "Found a match",
+                        &format!(
+                            "Function name: {}\nSymbol: {}\nRVA: {}",
+                            function_name, data.name, rva
+                        ),
+                    );
+
+                    found = true;
+                    break;
+                }
+            }
+            _ => {}
+        }
+    }
+
+    if !found {
+        nwg::simple_message("No matches found", "Function does not exist/was not found");
+    }
+    Ok(())
+}
