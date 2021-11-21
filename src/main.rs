@@ -89,7 +89,6 @@ impl BedrockDumper {
         std::fs::remove_file("./temp.txt").expect("ERROR: Could not remove file");
 
         pdb::pdb_dump(&pdb_path, file_type, dump_file).expect("ERROR: Failed to dump pdb contents");
-        nwg::simple_message("Completed", &format!("Completed dumping {}", pdb_path));
     }
 
     fn find(&self) {

@@ -54,6 +54,8 @@ pub fn pdb_dump(pdb_path: &str, file_type: &str, mut dump_file: File) -> pdb::Re
             _ => {}
         }
     }
+    nwg::simple_message("Completed", &format!("Completed dumping {}", pdb_path));
+
     Ok(())
 }
 
