@@ -24,6 +24,10 @@ pub fn pdb_dump(pdb_path: &str, file_type: &str, mut dump_file: File) -> pdb::Re
     )
     .expect("ERROR: Could not write to file");
 
+    if file_type == ".hpp" {
+        write!(dump_file, "#pragma once\n").expect("ERROR: Could not write to file");
+    }
+
     let file_path = File::open(&pdb_path)?;
     let mut pdb = pdb::PDB::open(file_path)?;
     let symbol_table = pdb.global_symbols()?;
