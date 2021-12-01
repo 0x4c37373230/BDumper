@@ -1,5 +1,5 @@
 # BDumper
-A simple windows bare-bones rust BDS .pdb dumper which dumps symbols and RVAs (Relative Virtual Addresses) into either a C++ header (.hpp) or a text file (.txt) which can also search for functions. This project was inspired by [Player]'s BDS .pdb dumper. The newest version has a GUI and can search and find specific functions while the older versions are CLI programs 
+A windows BDS .pdb dumper written in rust which dumps symbols and RVAs (Relative Virtual Addresses) into either a C++ header (.hpp) or a text file (.txt) and can also find data corresponding to specific functions. This project was inspired by [Player]'s BDS .pdb dumper. The newest version has a GUI and can search and find specific functions while the older versions are CLI programs 
 
 ## Dependencies
 
