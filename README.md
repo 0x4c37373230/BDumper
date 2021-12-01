@@ -10,21 +10,9 @@ A windows BDS .pdb dumper written in rust which dumps symbols and RVAs (Relative
 - [nanoid "0.4.0"](https://crates.io/crates/nanoid)
 - [pdb "0.7.0"](https://crates.io/crates/pdb)
 
-### Older Versions
-- [term-painter 0.3.0](https://crates.io/crates/term-painter)
-- [termprogress 0.3.4](https://crates.io/crates/termprogress)
-- [text_io 0.1.8](https://crates.io/crates/text_io)
-- [nanoid 0.4.0](https://crates.io/crates/nanoid)
-- [pdb 0.7.0](https://crates.io/crates/pdb)
-
 ## Usage
 
 ### Current Version
 <p align="center">
   <img src="https://media.discordapp.net/attachments/891760155614642277/912068785832333363/Screenshot_50.png" />
-</p>
-
-### Older Versions
-<p align="center">
-  <img src="https://cdn.discordapp.com/attachments/798563327587385364/893910849058652180/Screenshot_103.png" />
 </p>
