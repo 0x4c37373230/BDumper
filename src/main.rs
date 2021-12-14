@@ -1,12 +1,9 @@
 #![windows_subsystem = "windows"]
 
-mod files;
-mod pdb;
-
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use {nwd::NwgUi, nwg::NativeUi};
+use {nwd::NwgUi, nwg::NativeUi, bedrock_dumper::*};
 
 #[derive(Default, NwgUi)]
 pub struct BedrockDumper {
@@ -58,35 +55,14 @@ impl BedrockDumper {
             nwg::simple_message("Error", &format!("File does not exist: {}", pdb_path));
             return;
         }
-        files::create_file(&file_type);
 
-        std::fs::File::create("./temp.txt").expect("ERROR: Could not create file");
-
-        let mut dump_file = std::fs::OpenOptions::new()
-            .write(true)
-            .append(true)
-            .open("./temp.txt")
-            .unwrap();
-
-        match file_type {
-            ".txt" => {
-                dump_file = std::fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("./SymHook.txt")
-                    .unwrap()
+        let dump_file = match files::create_file(&file_type) {
+            Ok(file) => file,
+            Err(str) => {
+                nwg::simple_message("Error", &format!("{}: {}", str, file_type));
+                return;
             }
-            ".hpp" => {
-                dump_file = std::fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("./SymHook.hpp")
-                    .unwrap()
-            }
-            _ => {}
         };
-
-        std::fs::remove_file("./temp.txt").expect("ERROR: Could not remove file");
 
         pdb::pdb_dump(&pdb_path, file_type, dump_file).expect("ERROR: Failed to dump pdb contents");
     }
