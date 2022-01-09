@@ -8,5 +8,5 @@ edition = "2018"
 [dependencies]
 native-windows-gui = "1.0.12"
 native-windows-derive = "1.0.3"
-nanoid = "0.4.0"
+md5 = "0.7.0"
 pdb = "0.7.0"
