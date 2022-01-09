@@ -7,8 +7,8 @@ A windows BDS .pdb dumper written in rust which dumps symbols and RVAs (Relative
 
 - [native-windows-gui 1.0.12](https://crates.io/crates/native-windows-gui)
 - [native-windows-derive 1.0.3](https://crates.io/crates/native-windows-derive)
-- [nanoid "0.4.0"](https://crates.io/crates/nanoid)
-- [pdb "0.7.0"](https://crates.io/crates/pdb)
+- [nanoid 0.4.0](https://crates.io/crates/nanoid)
+- [pdb 0.7.0](https://crates.io/crates/pdb)
 
 ## Usage
 
