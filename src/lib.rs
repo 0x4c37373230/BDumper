@@ -76,16 +76,13 @@ pub mod demangle {
         return match msvc_demangler::demangle(symbol, flags) {
             Ok(res) => {
                 let demangled_name = res
-                    .replace("class std::basic_string<char, struct std::char_traits<char>, class std::allocator<char> >", "std::string")
-                    .replace("class", "")
-                    .replace("struct", "")
                     .replace("const", " const")
                     .replace("(", "( ");
 
                 let mut declaration: Vec<&str> = demangled_name.split(" ").collect();
 
                 for i in 0..declaration.len() {
-                    if &declaration[i] as &str == "const" && i != 0 {
+                    if &declaration[i] as &str == "const" && declaration[i - 1].starts_with("__") && i != 0 {
                         let check_space = if &declaration[i - 1] as &str == " " { i - 1 } else { i - 2 };
 
                         declaration.swap(i as usize, check_space);
@@ -93,13 +90,18 @@ pub mod demangle {
                 }
 
                 declaration.join(" ")
-                    .replace("( ", "(")
+                    .replace("class", "")
+                    .replace("struct", "")
                     .replace("  ", " ")
+                    .replace("   ", " ")
+                    .replace("< ", "<")
+                    .replace(" >", ">")
                     .replace(" &", "&")
                     .replace(" *", "*")
+                    .replace("( ", "(")
             }
             Err(_) => {
-                "Unable to resolve symbol".to_string()
+                "Unable to demangle symbol".to_string()
             }
         }
     }
@@ -109,7 +111,7 @@ pub mod pdb {
     use {
         pdb::{FallibleIterator, Rva},
         std::io::{BufRead, BufReader},
-        std::{fs::File, io::Write},
+        std::{fs::File, io::Write, time::Instant},
         crate::demangle
     };
 
@@ -126,6 +128,7 @@ pub mod pdb {
     }
 
     pub fn pdb_dump(pdb_path: &str, file_type: &str, mut dump_file: File) -> pdb::Result<()> {
+        let start = Instant::now();
         let file_path = File::open(&pdb_path)?;
         let mut pdb = pdb::PDB::open(file_path)?;
         let symbol_table = pdb.global_symbols()?;
@@ -141,12 +144,10 @@ pub mod pdb {
                         write!(dump_file, "{}\n{}\n{}\n\n", data.name, demangle::cleanup_symbol(&data.name.to_string()), rva)
                             .expect("ERROR: Could not write to file");
                     } else if file_type == ".hpp" {
-                        let fn_id = md5::compute(data.name.to_string().to_string());
-
                         write!(
                             dump_file,
                             "//{}\n//{}\nconstexpr unsigned int MD5_{:x} = {};\n\n",
-                            data.name, demangle::cleanup_symbol(&data.name.to_string()), fn_id, rva
+                            data.name, demangle::cleanup_symbol(&data.name.to_string()), md5::compute(data.name.to_string().to_string()), rva
                         )
                         .expect("ERROR: Could not write to file");
                     } else {
@@ -156,7 +157,7 @@ pub mod pdb {
                 _ => {}
             }
         }
-        nwg::simple_message("Completed", &format!("Completed dumping {}", pdb_path));
+        nwg::simple_message("Completed", &format!("Completed dumping {} in {:?}", pdb_path, start.elapsed()));
 
         Ok(())
     }
@@ -208,12 +209,10 @@ pub mod pdb {
                         write!(dump_file, "{}\n{}\n{}\n\n", &bds_func.symbol, demangle::cleanup_symbol(&bds_func.symbol), bds_func.rva)
                             .expect("ERROR: Could not write to file");
                     } else if file_type == ".hpp" {
-                        let fn_id = md5::compute(&bds_func.symbol);
-
                         write!(
                             dump_file,
                             "//{}\n//{}\nconstexpr unsigned int MD5_{:x} = {};\n\n",
-                            &bds_func.symbol, demangle::cleanup_symbol(&bds_func.symbol), fn_id, bds_func.rva
+                            &bds_func.symbol, demangle::cleanup_symbol(&bds_func.symbol), md5::compute(&bds_func.symbol), bds_func.rva
                         )
                         .expect("ERROR: Could not write to file");
                     }
