@@ -69,11 +69,48 @@ pub mod setup {
     }
 }
 
+pub mod demangle {
+    pub fn cleanup_symbol(symbol: &str) -> String {
+        let flags = msvc_demangler::DemangleFlags::llvm();
+
+        return match msvc_demangler::demangle(symbol, flags) {
+            Ok(res) => {
+                let demangled_name = res
+                    .replace("class std::basic_string<char, struct std::char_traits<char>, class std::allocator<char> >", "std::string")
+                    .replace("class", "")
+                    .replace("struct", "")
+                    .replace("const", " const")
+                    .replace("(", "( ");
+
+                let mut declaration: Vec<&str> = demangled_name.split(" ").collect();
+
+                for i in 0..declaration.len() {
+                    if &declaration[i] as &str == "const" && i != 0 {
+                        let check_space = if &declaration[i - 1] as &str == " " { i - 1 } else { i - 2 };
+
+                        declaration.swap(i as usize, check_space);
+                    }
+                }
+
+                declaration.join(" ")
+                    .replace("( ", "(")
+                    .replace("  ", " ")
+                    .replace(" &", "&")
+                    .replace(" *", "*")
+            }
+            Err(_) => {
+                "Unable to resolve symbol".to_string()
+            }
+        }
+    }
+}
+
 pub mod pdb {
     use {
         pdb::{FallibleIterator, Rva},
         std::io::{BufRead, BufReader},
         std::{fs::File, io::Write},
+        crate::demangle
     };
 
     pub struct BDSFunction {
@@ -101,15 +138,15 @@ pub mod pdb {
                     let rva = data.offset.to_rva(&address_map).unwrap_or_default();
 
                     if file_type == ".txt" {
-                        write!(dump_file, "{}\n{}\n\n", data.name, rva)
+                        write!(dump_file, "{}\n{}\n{}\n\n", data.name, demangle::cleanup_symbol(&data.name.to_string()), rva)
                             .expect("ERROR: Could not write to file");
                     } else if file_type == ".hpp" {
                         let fn_id = md5::compute(data.name.to_string().to_string());
 
                         write!(
                             dump_file,
-                            "//{};\nconstexpr unsigned int MD5_{:x} = {};\n\n",
-                            data.name, fn_id, rva
+                            "//{}\n//{}\nconstexpr unsigned int MD5_{:x} = {};\n\n",
+                            data.name, demangle::cleanup_symbol(&data.name.to_string()), fn_id, rva
                         )
                         .expect("ERROR: Could not write to file");
                     } else {
@@ -141,7 +178,7 @@ pub mod pdb {
 
                     if symbol.contains(&substr) {
                         let found_function =
-                            BDSFunction::create_instance(String::from(function_name), symbol, rva);
+                            BDSFunction::create_instance(demangle::cleanup_symbol(&symbol), symbol, rva);
                         return Ok(found_function);
                     }
                 }
@@ -168,15 +205,15 @@ pub mod pdb {
             match find_function(pdb_path, line_ref) {
                 Ok(bds_func) => {
                     if file_type == ".txt" {
-                        write!(dump_file, "{}\n{}\n\n", bds_func.symbol, bds_func.rva)
+                        write!(dump_file, "{}\n{}\n{}\n\n", &bds_func.symbol, demangle::cleanup_symbol(&bds_func.symbol), bds_func.rva)
                             .expect("ERROR: Could not write to file");
                     } else if file_type == ".hpp" {
                         let fn_id = md5::compute(&bds_func.symbol);
 
                         write!(
                             dump_file,
-                            "//{};\nconstexpr unsigned int MD5_{:x} = {};\n\n",
-                            bds_func.symbol, fn_id, bds_func.rva
+                            "//{}\n//{}\nconstexpr unsigned int MD5_{:x} = {};\n\n",
+                            &bds_func.symbol, demangle::cleanup_symbol(&bds_func.symbol), fn_id, bds_func.rva
                         )
                         .expect("ERROR: Could not write to file");
                     }
