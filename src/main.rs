@@ -3,7 +3,11 @@
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
-use {bedrock_dumper::*, nwd::NwgUi, nwg::NativeUi};
+use {
+    bedrock_dumper::*,
+    nwd::NwgUi,
+    nwg::{CheckBoxState, NativeUi},
+};
 
 #[derive(Default, NwgUi)]
 pub struct BedrockDumper {
@@ -33,9 +37,12 @@ pub struct BedrockDumper {
 
     #[nwg_control(text: "Input a function's name here", size: (280, 25), position: (10, 130))]
     label4: nwg::Label,
-
-    #[nwg_control(text: "", size: (570, 25), position: (10, 150))]
+    //570 25
+    #[nwg_control(text: "", size: (280, 25), position: (10, 150))]
     func_name: nwg::TextInput,
+
+    #[nwg_control(text: "Include demangled function prototypes", size: (280, 25), position: (300, 150))]
+    should_demangle: nwg::CheckBox,
 
     #[nwg_control(text: "Dump Data", size: (185, 30), position: (10, 180))]
     #[nwg_events( OnButtonClick: [BedrockDumper::dump] )]
@@ -54,9 +61,14 @@ impl BedrockDumper {
     fn dump(&self) {
         let pdb_path: &str = &self.pdb_path.text();
         let file_type: &str = &self.file_type.text();
+        let demangle = if &self.should_demangle.check_state() == &CheckBoxState::Checked {
+            true
+        } else {
+            false
+        };
 
         match setup::dump_init(pdb_path, file_type) {
-            Ok(dump_file) => pdb::pdb_dump(pdb_path, file_type, dump_file)
+            Ok(dump_file) => pdb::pdb_dump(pdb_path, file_type, dump_file, demangle)
                 .expect("ERROR: Failed to dump pdb contents"),
             Err(str) => {
                 nwg::simple_message("Error", &str);
@@ -83,13 +95,11 @@ impl BedrockDumper {
         let file_type: &str = &self.file_type.text();
 
         match setup::dump_init(pdb_path, file_type) {
-            Ok(dump_file) => {
-                match pdb::find_functions(pdb_path, file_type, dump_file) {
-                    Err(str) => {
-                        nwg::simple_message("Error", &str);
-                    }
-                    _ => {}
+            Ok(dump_file) => match pdb::find_functions(pdb_path, file_type, dump_file) {
+                Err(str) => {
+                    nwg::simple_message("Error", &str);
                 }
+                _ => {}
             },
             Err(str) => {
                 nwg::simple_message("Error", &str);
