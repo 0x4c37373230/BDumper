@@ -6,10 +6,10 @@ A windows BDS .pdb dumper written in rust which dumps symbols, reconstructed fun
 ### Current version
 
 - [md5 0.7.0](https://crates.io/crates/md5)
-- [msvc_demangler](https://crates.io/crates/msvc-demangler)
 - [native-windows-gui 1.0.12](https://crates.io/crates/native-windows-gui)
 - [native-windows-derive 1.0.3](https://crates.io/crates/native-windows-derive)
 - [pdb 0.7.0](https://crates.io/crates/pdb)
+- [cc-rs 1.0](https://crates.io/crates/cc)
 
 ## Usage
 

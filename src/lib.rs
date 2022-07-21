@@ -1,29 +1,32 @@
 extern crate native_windows_gui as nwg;
 
+use std::os::raw::c_char;
+
+extern {
+    fn demangle(s: *const c_char) -> *const c_char;
+}
+
 pub mod files {
     pub fn path_exists(path: &str) -> bool {
         std::fs::metadata(path).is_ok()
     }
 
     pub fn create_file(file_type: &str) -> Result<std::fs::File, &str> {
-        match file_type {
-            ".txt" => {
-                std::fs::File::create("./SymHook.txt").expect("ERROR: Could not create file");
-                Ok(std::fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("./SymHook.txt")
-                    .unwrap())
-            }
-            ".hpp" => {
-                std::fs::File::create("SymHook.hpp").expect("ERROR: Could not create file");
-                Ok(std::fs::OpenOptions::new()
-                    .write(true)
-                    .append(true)
-                    .open("./SymHook.hpp")
-                    .unwrap())
-            }
-            _ => Err("Invalid File Type"),
+        let file_path = if file_type == ".txt" {
+            "./SymHook.txt"
+        } else if file_type == ".hpp" {
+            "./SymHook.hpp"
+        } else {
+            return Err("Invalid File Type");
+        };
+
+        match std::fs::File::create(file_path) {
+            Ok(_) => Ok(std::fs::OpenOptions::new()
+                .write(true)
+                .append(true)
+                .open(file_path)
+                .unwrap()),
+            Err(_) => Err("Could not create file")
         }
     }
 }
@@ -70,7 +73,50 @@ pub mod setup {
 }
 
 pub mod demangle {
+    use std::ffi::{CStr, CString};
+    use crate::demangle;
+
+    pub fn undecorate(symbol: &str) -> String {
+        unsafe {
+            let cstr = CString::new(symbol).unwrap();
+            let result: &CStr = CStr::from_ptr(demangle(cstr.as_ptr()));
+
+            return result.to_str().unwrap().to_owned();
+        }
+    }
+
     pub fn cleanup_symbol(symbol: &str) -> String {
+        let res = undecorate(symbol);
+        let demangled_name = res.replace("const", " const").replace("(", "( ");
+        let mut declaration: Vec<&str> = demangled_name.split(" ").collect();
+
+        for i in 0..declaration.len() {
+            if &declaration[i] as &str == "const"
+                && declaration[i - 1].starts_with("__")
+                && i != 0
+            {
+                let check_space = if &declaration[i - 1] as &str == " " {
+                    i - 1
+                } else {
+                    i - 2
+                };
+
+                declaration.swap(i as usize, check_space);
+            }
+        }
+
+        declaration
+            .join(" ")
+            .replace("class", "")
+            .replace("struct", "")
+            .replace("  ", " ")
+            .replace("   ", " ")
+            .replace("< ", "<")
+            .replace(" >", ">")
+            .replace(" &", "&")
+            .replace(" *", "*")
+            .replace("( ", "(")
+        /*
         let flags = msvc_demangler::DemangleFlags::llvm();
 
         return match msvc_demangler::demangle(symbol, flags) {
@@ -108,6 +154,7 @@ pub mod demangle {
             }
             Err(_) => "Unable to demangle symbol".to_string(),
         };
+         */
     }
 }
 
