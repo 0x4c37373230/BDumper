@@ -2,15 +2,44 @@ extern crate native_windows_gui as nwg;
 
 use std::os::raw::c_char;
 
-extern {
+extern "C" {
+    /// C function that acts as an interface between BDumper and the windows debug function
+    /// UnDecorateSymbolName
+    ///
+    /// # Arguments
+    ///
+    /// * `s`: A C string that holds the MSVC symbol to be demangled
+    ///
+    /// returns: *const i8
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     fn demangle(s: *const c_char) -> *const c_char;
 }
 
 pub mod files {
+    /// This checks if a file or directory exists
     pub fn path_exists(path: &str) -> bool {
         std::fs::metadata(path).is_ok()
     }
 
+    /// This function will create the output file the dump will be written to
+    ///
+    /// # Arguments
+    ///
+    /// * `file_type`: Determines, well, the file type. It can be .hpp (for a C++ header) or .txt
+    /// for a text file
+    ///
+    /// returns: Result<File, &str>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn create_file(file_type: &str) -> Result<std::fs::File, &str> {
         let file_path = if file_type == ".txt" {
             "./SymHook.txt"
@@ -26,7 +55,7 @@ pub mod files {
                 .append(true)
                 .open(file_path)
                 .unwrap()),
-            Err(_) => Err("Could not create file")
+            Err(_) => Err("Could not create file"),
         }
     }
 }
@@ -34,6 +63,7 @@ pub mod files {
 pub mod setup {
     use {crate::files, std::fs::File, std::io::Write};
 
+    /// This function will create the filter settings file if it doesn't exist
     pub fn filter_manager() -> bool {
         if !files::path_exists("./dumpFilter.txt") {
             File::create("dumpFilter.txt").unwrap();
@@ -43,6 +73,20 @@ pub mod setup {
         true
     }
 
+    /// This writes the 'header' of the dump output
+    ///
+    /// # Arguments
+    ///
+    /// * `pdb_path`: Location of the pdb file to be dumped
+    /// * `file_type`: Output format type (.hpp for C++ header, .txt for plain text)
+    ///
+    /// returns: Result<File, String>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn dump_init(pdb_path: &str, file_type: &str) -> Result<File, String> {
         if files::path_exists(pdb_path) == false {
             return Err(String::from(&format!("File does not exist: {}", pdb_path)));
@@ -73,9 +117,22 @@ pub mod setup {
 }
 
 pub mod demangle {
-    use std::ffi::{CStr, CString};
     use crate::demangle;
+    use std::ffi::{CStr, CString};
 
+    /// A wrapper for the C demangling function in order to isolate the unsafe code
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol`: A reference to a string that contains the MSVC symbol to demangle
+    ///
+    /// returns: String
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn undecorate(symbol: &str) -> String {
         unsafe {
             let cstr = CString::new(symbol).unwrap();
@@ -85,15 +142,26 @@ pub mod demangle {
         }
     }
 
+    /// Formats already demangled symbols to make the output nicer and more readable
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol`: Demangled function prototype
+    ///
+    /// returns: String
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn cleanup_symbol(symbol: &str) -> String {
         let res = undecorate(symbol);
         let demangled_name = res.replace("const", " const").replace("(", "( ");
         let mut declaration: Vec<&str> = demangled_name.split(" ").collect();
 
         for i in 0..declaration.len() {
-            if &declaration[i] as &str == "const"
-                && declaration[i - 1].starts_with("__")
-                && i != 0
+            if &declaration[i] as &str == "const" && declaration[i - 1].starts_with("__") && i != 0
             {
                 let check_space = if &declaration[i - 1] as &str == " " {
                     i - 1
@@ -116,45 +184,6 @@ pub mod demangle {
             .replace(" &", "&")
             .replace(" *", "*")
             .replace("( ", "(")
-        /*
-        let flags = msvc_demangler::DemangleFlags::llvm();
-
-        return match msvc_demangler::demangle(symbol, flags) {
-            Ok(res) => {
-                let demangled_name = res.replace("const", " const").replace("(", "( ");
-
-                let mut declaration: Vec<&str> = demangled_name.split(" ").collect();
-
-                for i in 0..declaration.len() {
-                    if &declaration[i] as &str == "const"
-                        && declaration[i - 1].starts_with("__")
-                        && i != 0
-                    {
-                        let check_space = if &declaration[i - 1] as &str == " " {
-                            i - 1
-                        } else {
-                            i - 2
-                        };
-
-                        declaration.swap(i as usize, check_space);
-                    }
-                }
-
-                declaration
-                    .join(" ")
-                    .replace("class", "")
-                    .replace("struct", "")
-                    .replace("  ", " ")
-                    .replace("   ", " ")
-                    .replace("< ", "<")
-                    .replace(" >", ">")
-                    .replace(" &", "&")
-                    .replace(" *", "*")
-                    .replace("( ", "(")
-            }
-            Err(_) => "Unable to demangle symbol".to_string(),
-        };
-         */
     }
 }
 
@@ -173,12 +202,49 @@ pub mod pdb {
     }
 
     impl BDSFunction {
+        /// This function acts as a constructor for BDSFunction instances
+        ///
+        /// # Arguments
+        ///
+        /// * `name`: Symbol (function or constant) name
+        /// * `symbol`: Mangled function symbol
+        /// * `rva`: Relative virtual address of the symbol
+        ///
+        /// returns: BDSFunction
+        ///
+        /// # Examples
+        ///
+        /// ```
+        ///
+        /// ```
         fn create_instance(name: String, symbol: String, rva: Rva) -> BDSFunction {
             return BDSFunction { name, symbol, rva };
         }
     }
 
-    pub fn pdb_dump(pdb_path: &str, file_type: &str, mut dump_file: File, should_demangle: bool) -> pdb::Result<()> {
+    ///
+    ///
+    /// # Arguments
+    ///
+    /// * `pdb_path`: Location of the pdb file to be dumped
+    /// * `file_type`: Dump result output format
+    /// * `dump_file`: Handle to the file to write the PDB contents to
+    /// * `should_demangle`: Determine if names should be demangled or not (the latter increases
+    /// performance)
+    ///
+    /// returns: Result<(), Error>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
+    pub fn pdb_dump(
+        pdb_path: &str,
+        file_type: &str,
+        mut dump_file: File,
+        should_demangle: bool,
+    ) -> pdb::Result<()> {
         let start = Instant::now();
         let file_path = File::open(&pdb_path)?;
         let mut pdb = pdb::PDB::open(file_path)?;
@@ -236,6 +302,22 @@ pub mod pdb {
         Ok(())
     }
 
+    /// Similar to the function above except that this returns the data corresponding to only one
+    /// function therefore making it more performant since only the function symbol is checked every
+    /// iteration, no data writing and nothing else is accessed
+    ///
+    /// # Arguments
+    ///
+    /// * `pdb_path`: Location of the PDB file to be dumped
+    /// * `function_name`: Function name to find formatted as [Class Name]::[Function]
+    ///
+    /// returns: Result<BDSFunction, String>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     pub fn find_function(pdb_path: &str, function_name: &str) -> Result<BDSFunction, String> {
         let file_path = File::open(&pdb_path).unwrap();
         let mut pdb = pdb::PDB::open(file_path).unwrap();
@@ -269,7 +351,27 @@ pub mod pdb {
         ))
     }
 
-    pub fn find_functions(pdb_path: &str, file_type: &str, mut dump_file: File, ) -> Result<(), String> {
+    /// Same as above but it finds multiple functions that should be written down in the filter file
+    /// generated by this program. Less performant
+    ///
+    /// # Arguments
+    ///
+    /// * `pdb_path`: Location of the PDB to be dumped
+    /// * `file_type`: Output format
+    /// * `dump_file`: Output file handle
+    ///
+    /// returns: Result<(), String>
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
+    pub fn find_functions(
+        pdb_path: &str,
+        file_type: &str,
+        mut dump_file: File,
+    ) -> Result<(), String> {
         let file = File::open("./dumpFilter.txt").unwrap();
         let functions = BufReader::new(file);
 

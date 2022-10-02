@@ -14,7 +14,6 @@ version = "0.1.0"
 dependencies = [
  "cc",
  "md5",
- "msvc-demangler",
  "native-windows-derive",
  "native-windows-gui",
  "pdb",
@@ -85,15 +84,6 @@ name = "md5"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "490cc448043f947bae3cbee9c203358d62dbee0db12107a74be5c30ccfd09771"
-
-[[package]]
-name = "msvc-demangler"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bfb67c6dd0fa9b00619c41c5700b6f92d5f418be49b45ddb9970fbd4569df3c8"
-dependencies = [
- "bitflags",
-]
 
 [[package]]
 name = "native-windows-derive"
