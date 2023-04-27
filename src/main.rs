@@ -1,13 +1,36 @@
 #![windows_subsystem = "windows"]
 
+mod demangle;
+mod files;
+mod pdb;
+mod setup;
+
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
 use {
-    bedrock_dumper::*,
     nwd::NwgUi,
     nwg::{CheckBoxState, NativeUi},
+    std::os::raw::c_char,
 };
+
+extern "C" {
+    /// C function that acts as an interface between BDumper and the windows debug function
+    /// UnDecorateSymbolName
+    ///
+    /// # Arguments
+    ///
+    /// * `s`: A C string that holds the MSVC symbol to be demangled
+    ///
+    /// returns: *const i8
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
+    fn demangle(s: *const c_char) -> *const c_char;
+}
 
 #[derive(Default, NwgUi)]
 pub struct BedrockDumper {
