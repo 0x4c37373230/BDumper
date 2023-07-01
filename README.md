@@ -1,3 +1,6 @@
+# THIS PROJECT IS NOW OBSOLETE. SEE [outcrop](https://github.com/0x4c37373230/outcrop-final)
+#### I decided to archive all my standalone bedrock reverse engineering and modding projects in order to combine all of them into a single, user friendly tool so others can use them as well. BDumper and all other BDS tools will be continued and maintained there.
+
 # BDumper
 A windows BDS .pdb dumper written in rust which dumps symbols, reconstructed function prototypes from demangled symbols and RVAs (Relative Virtual Addresses) into either a C++ header (.hpp) or a text file (.txt) and can also find data corresponding to specific functions. This project was inspired by [Player]'s BDS .pdb dumper. The newest version has a GUI and can search and find specific functions while the older versions are CLI programs. The variables in the headers are named after the symbol's MD5 hashes.
 
